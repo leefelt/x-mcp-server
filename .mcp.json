@@ -1,0 +1,16 @@
+{
+	"mcpServers": {
+		"x": {
+			"command": "node",
+			"args": ["dist/index.js"],
+			"cwd": "/Users/lee/x-mcp-server",
+			"env": {
+				"X_API_KEY": "",
+				"X_API_SECRET": "",
+				"X_ACCESS_TOKEN": "",
+				"X_ACCESS_TOKEN_SECRET": "",
+				"X_API_TIER": "free"
+			}
+		}
+	}
+}
