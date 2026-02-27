@@ -9,12 +9,20 @@ export function registerPostTweet(server: McpServer, config: Config): void {
 	server.tool(
 		"post_tweet",
 		"Post a tweet to X (Twitter)",
-		{ text: z.string().min(1).max(280).describe("Tweet text (max 280 characters)") },
-		async ({ text }) => {
+		{
+			text: z.string().min(1).max(280).describe("Tweet text (max 280 characters)"),
+			reply_to_tweet_id: z.string().optional().describe("Tweet ID to reply to (optional)"),
+		},
+		async ({ text, reply_to_tweet_id }) => {
 			try {
 				assertTier("post_tweet", config);
 				const client = getClient(config);
-				const result = await client.v2.tweet(text);
+				const result = await client.v2.tweet({
+					text,
+					...(reply_to_tweet_id && {
+						reply: { in_reply_to_tweet_id: reply_to_tweet_id },
+					}),
+				});
 				return {
 					content: [
 						{
