@@ -2,7 +2,10 @@ type LogLevel = "debug" | "info" | "warn" | "error";
 
 const LEVELS: Record<LogLevel, number> = { debug: 0, info: 1, warn: 2, error: 3 };
 
-const currentLevel: LogLevel = (process.env.LOG_LEVEL as LogLevel) ?? "info";
+const currentLevel: LogLevel =
+	process.env.LOG_LEVEL && process.env.LOG_LEVEL in LEVELS
+		? (process.env.LOG_LEVEL as LogLevel)
+		: "info";
 
 function log(level: LogLevel, message: string, data?: Record<string, unknown>): void {
 	if (LEVELS[level] < LEVELS[currentLevel]) return;

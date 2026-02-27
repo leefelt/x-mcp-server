@@ -1,5 +1,17 @@
+import type { ClientRequest, IncomingMessage } from "node:http";
+import { ApiResponseError } from "twitter-api-v2";
 import { describe, expect, it, vi } from "vitest";
 import { formatError, TierError, XApiError } from "../src/errors.js";
+
+function createApiResponseError(message: string, code: number): ApiResponseError {
+	return new ApiResponseError(message, {
+		code,
+		request: {} as ClientRequest,
+		response: {} as IncomingMessage,
+		headers: {},
+		data: { errors: [] },
+	});
+}
 
 // Suppress logger.error stderr output during tests
 vi.mock("../src/logger.js", () => ({
@@ -39,6 +51,32 @@ describe("formatError", () => {
 		expect(result.isError).toBe(true);
 		expect(result.content[0]?.text).toContain("Rate limited by X API");
 		expect(result.content[0]?.text).toContain("Too many requests");
+	});
+
+	it("formats ApiResponseError correctly", () => {
+		const error = createApiResponseError("Forbidden", 403);
+		const result = formatError(error);
+
+		expect(result.isError).toBe(true);
+		expect(result.content[0]?.text).toBe("X API error (HTTP 403): Forbidden");
+	});
+
+	it("formats ApiResponseError with rate limit (429)", () => {
+		const error = createApiResponseError("Too Many Requests", 429);
+		const result = formatError(error);
+
+		expect(result.isError).toBe(true);
+		expect(result.content[0]?.text).toContain("Rate limited by X API");
+		expect(result.content[0]?.text).toContain("Too Many Requests");
+	});
+
+	it("formats ApiResponseError with rate limit (420)", () => {
+		const error = createApiResponseError("Enhance Your Calm", 420);
+		const result = formatError(error);
+
+		expect(result.isError).toBe(true);
+		expect(result.content[0]?.text).toContain("Rate limited by X API");
+		expect(result.content[0]?.text).toContain("Enhance Your Calm");
 	});
 
 	it("formats generic Error", () => {

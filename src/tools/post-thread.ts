@@ -24,12 +24,35 @@ export function registerPostThread(server: McpServer, config: Config): void {
 				let lastId: string | undefined;
 
 				for (const text of tweets) {
-					const result = await client.v2.tweet({
-						text,
-						...(lastId && { reply: { in_reply_to_tweet_id: lastId } }),
-					});
-					posted.push({ id: result.data.id, text: result.data.text });
-					lastId = result.data.id;
+					try {
+						const result = await client.v2.tweet({
+							text,
+							...(lastId && { reply: { in_reply_to_tweet_id: lastId } }),
+						});
+						posted.push({ id: result.data.id, text: result.data.text });
+						lastId = result.data.id;
+					} catch (error) {
+						const errorMsg = error instanceof Error ? error.message : String(error);
+						return {
+							content: [
+								{
+									type: "text" as const,
+									text: JSON.stringify(
+										{
+											error: `Thread failed at tweet ${posted.length + 1}/${tweets.length}: ${errorMsg}`,
+											posted_tweets: posted.map((t) => ({
+												...t,
+												url: `https://x.com/i/status/${t.id}`,
+											})),
+										},
+										null,
+										2,
+									),
+								},
+							],
+							isError: true,
+						};
+					}
 				}
 
 				return {

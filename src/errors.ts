@@ -1,3 +1,4 @@
+import { ApiResponseError } from "twitter-api-v2";
 import { logger } from "./logger.js";
 
 export class TierError extends Error {
@@ -30,6 +31,10 @@ export function formatError(error: unknown): {
 
 	if (error instanceof TierError) {
 		message = error.message;
+	} else if (error instanceof ApiResponseError) {
+		message = error.rateLimitError
+			? `Rate limited by X API. Please wait and try again. Details: ${error.message}`
+			: `X API error (HTTP ${error.code}): ${error.message}`;
 	} else if (error instanceof XApiError) {
 		message = error.rateLimit
 			? `Rate limited by X API. Please wait and try again. Details: ${error.message}`

@@ -17,23 +17,27 @@ const mockUserMentionTimeline = vi.fn();
 const mockUserByUsername = vi.fn();
 const mockMe = vi.fn();
 
-vi.mock("twitter-api-v2", () => ({
-	TwitterApi: vi.fn().mockImplementation(() => ({
-		v2: {
-			tweet: mockTweet,
-			deleteTweet: mockDeleteTweet,
-			like: mockLike,
-			unlike: mockUnlike,
-			retweet: mockRetweet,
-			unretweet: mockUnretweet,
-			search: mockSearch,
-			userTimeline: mockUserTimeline,
-			userMentionTimeline: mockUserMentionTimeline,
-			userByUsername: mockUserByUsername,
-			me: mockMe,
-		},
-	})),
-}));
+vi.mock("twitter-api-v2", async (importOriginal) => {
+	const actual = await importOriginal<typeof import("twitter-api-v2")>();
+	return {
+		...actual,
+		TwitterApi: vi.fn().mockImplementation(() => ({
+			v2: {
+				tweet: mockTweet,
+				deleteTweet: mockDeleteTweet,
+				like: mockLike,
+				unlike: mockUnlike,
+				retweet: mockRetweet,
+				unretweet: mockUnretweet,
+				search: mockSearch,
+				userTimeline: mockUserTimeline,
+				userMentionTimeline: mockUserMentionTimeline,
+				userByUsername: mockUserByUsername,
+				me: mockMe,
+			},
+		})),
+	};
+});
 
 // Suppress logger stderr output during tests
 vi.mock("../src/logger.js", () => ({
@@ -249,9 +253,20 @@ describe("post_thread", () => {
 
 		const handler = captureTool(registerPostThread, freeConfig);
 		const result = await handler({ tweets: ["First", "Second"] });
+		const data = parseContent(result) as {
+			error: string;
+			posted_tweets: Array<{ id: string; text: string; url: string }>;
+		};
 
 		expect(result.isError).toBe(true);
-		expect(getTextContent(result)).toContain("Rate limit");
+		expect(data.error).toContain("Rate limit");
+		expect(data.error).toContain("tweet 2/2");
+		expect(data.posted_tweets).toHaveLength(1);
+		expect(data.posted_tweets[0]).toEqual({
+			id: "1",
+			text: "First",
+			url: "https://x.com/i/status/1",
+		});
 	});
 });
 
@@ -622,6 +637,16 @@ describe("get_user", () => {
 		expect(getTextContent(result)).toContain("get_user");
 		expect(getTextContent(result)).toContain("basic");
 		expect(mockUserByUsername).not.toHaveBeenCalled();
+	});
+
+	it("returns error when user is not found", async () => {
+		mockUserByUsername.mockResolvedValue({ data: undefined });
+
+		const handler = captureTool(registerGetUser, basicConfig);
+		const result = await handler({ username: "nonexistent" });
+
+		expect(result.isError).toBe(true);
+		expect(getTextContent(result)).toContain("not found");
 	});
 
 	it("returns error when user lookup fails", async () => {

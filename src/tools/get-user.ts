@@ -25,6 +25,17 @@ export function registerGetUser(server: McpServer, config: Config): void {
 						"verified",
 					],
 				});
+				if (!result.data) {
+					return {
+						content: [
+							{
+								type: "text" as const,
+								text: JSON.stringify({ error: `User "${username}" not found` }, null, 2),
+							},
+						],
+						isError: true,
+					};
+				}
 				return {
 					content: [
 						{
