@@ -126,13 +126,33 @@ describe("post_tweet", () => {
 		const result = await handler({ text: "Hello world" });
 		const data = parseContent(result) as Record<string, unknown>;
 
-		expect(mockTweet).toHaveBeenCalledWith("Hello world");
+		expect(mockTweet).toHaveBeenCalledWith({ text: "Hello world" });
 		expect(data).toEqual({
 			id: "111",
 			text: "Hello world",
 			url: "https://x.com/i/status/111",
 		});
 		expect(result.isError).toBeUndefined();
+	});
+
+	it("posts a reply when reply_to_tweet_id is provided", async () => {
+		mockTweet.mockResolvedValue({
+			data: { id: "222", text: "Reply text" },
+		});
+
+		const handler = captureTool(registerPostTweet, freeConfig);
+		const result = await handler({ text: "Reply text", reply_to_tweet_id: "111" });
+		const data = parseContent(result) as Record<string, unknown>;
+
+		expect(mockTweet).toHaveBeenCalledWith({
+			text: "Reply text",
+			reply: { in_reply_to_tweet_id: "111" },
+		});
+		expect(data).toEqual({
+			id: "222",
+			text: "Reply text",
+			url: "https://x.com/i/status/222",
+		});
 	});
 
 	it("is allowed on free tier", async () => {
